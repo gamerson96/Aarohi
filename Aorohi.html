@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aarohi - Final Hackathon Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet Maps CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        /* Custom Styles & Refinements (UNTOUCHED) */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        :root {
+            --primary: #E63946; /* Vibrant Red */
+            --secondary: #457B9D; /* Calming Blue */
+            --accent: #A8DADC; /* Light Teal */
+            --background: #F1FAEE; /* Off-white */
+            --text-dark: #1D3557; /* Deep Blue */
+        }
+        .bg-primary { background-color: var(--primary); }
+        .bg-secondary { background-color: var(--secondary); }
+        .bg-accent { background-color: var(--accent); }
+        .bg-app-background { background-color: var(--background); }
+        .text-dark { color: var(--text-dark); }
+        .text-primary { color: var(--primary); }
+        .text-secondary { color: var(--secondary); }
+        .border-primary { border-color: var(--primary); }
+
+        /* Screen Transitions */
+        .screen {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            animation: fadeIn 0.5s ease-in-out;
+            flex-direction: column;
+        }
+        .screen.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Splash Screen Enhancements */
+        #splash-screen {
+            background: linear-gradient(160deg, #f1faee 0%, #a8dadc 100%);
+        }
+        #splash-screen p {
+            animation: fadeInFromBottom 1s ease-in-out 0.5s both;
+        }
+        @keyframes fadeInFromBottom {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Voice Assistant Wave & Mic Glow */
+        #voice-assistant-screen { background-color: var(--text-dark); }
+        .voice-wave-container {
+            border: 3px solid transparent;
+            border-radius: 9999px;
+            padding: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .voice-wave-container.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent);
+        }
+        .voice-wave span {
+            width: 6px; height: 10px; background: var(--accent); margin: 0 5px; border-radius: 5px;
+            animation: smoothWave 1.5s infinite ease-in-out;
+        }
+        .voice-wave span:nth-child(2) { animation-delay: -1.3s; }
+        .voice-wave span:nth-child(3) { animation-delay: -1.1s; }
+        .voice-wave span:nth-child(4) { animation-delay: -0.9s; }
+        .voice-wave span:nth-child(5) { animation-delay: -0.7s; }
+        @keyframes smoothWave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(6); }
+        }
+
+        /* Timeline Animation */
+        .timeline-item { position: relative; padding-left: 30px; padding-bottom: 20px; opacity: 0; transform: translateX(-20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .timeline-item.visible { opacity: 1; transform: translateX(0); }
+        .timeline-item::before {
+            content: ''; position: absolute; left: 7px; top: 8px; width: 2px;
+            background-color: #e5e7eb; height: 0; transition: height 0.5s ease;
+        }
+        .timeline-item.visible::before { height: calc(100% - 8px); }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .timeline-item:last-child::before { display: none; }
+        .timeline-dot {
+            position: absolute; left: 0; top: 5px; width: 16px; height: 16px;
+            border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+            transform: scale(0); transition: transform 0.3s ease;
+        }
+        .timeline-item.visible .timeline-dot { transform: scale(1); }
+
+        /* Horizontal Scroll */
+        .horizontal-scroll {
+            display: flex;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .horizontal-scroll::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .horizontal-scroll > * {
+            flex-shrink: 0;
+            margin-right: 1rem;
+        }
+        .horizontal-scroll > *:last-child {
+            margin-right: 0;
+        }
+
+        /* Custom Map Icons */
+        .map-icon {
+            width: 32px;
+            height: 32px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .map-icon-bg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: absolute;
+            border: 2px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .map-icon-text {
+            position: relative;
+            z-index: 1;
+            color: white;
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        /* Leaflet Controls */
+        #map, #timeline-map { height: 100%; width: 100%; z-index: 1; }
+        .leaflet-control-zoom, .leaflet-control-attribution { display: none; }
+
+        /* Reusable Components: Toast, Modal, Skeleton */
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translate(-50%, 200%);
+            background-color: var(--text-dark);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 9999px;
+            font-weight: 500;
+            z-index: 9999;
+            transition: transform 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+        }
+        #toast.show {
+            transform: translate(-50%, 0);
+        }
+        .skeleton {
+            background-color: #e5e7eb;
+            border-radius: 0.5rem;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            50% { opacity: .5; }
+        }
+        
+        /* NEW: Voice Assistant Chat UI */
+        #chat-container {
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            overflow: hidden;
+        }
+        #chat-container.visible {
+            max-height: 300px; /* Adjust as needed */
+            opacity: 1;
+        }
+        .chat-bubble {
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            max-width: 80%;
+            margin-bottom: 0.5rem;
+        }
+        .chat-bubble.user {
+            background-color: var(--secondary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .chat-bubble.aarohi {
+            background-color: #e5e7eb;
+            color: var(--text-dark);
+            align-self: flex-start;
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        /* NEW: Floating Avatar */
+        #aarohi-avatar {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-800 flex items-center justify-center min-h-screen">
+
+    <!-- Mobile Phone Frame -->
+    <div id="app-container" class="w-full max-w-sm h-[800px] max-h-[90vh] bg-app-background rounded-[40px] shadow-2xl overflow-hidden border-8 border-black relative flex flex-col">
+        <div id="main-content" class="flex-grow w-full h-full overflow-y-auto pb-20 relative">
+
+            <!-- ========= SCREEN 1: Splash / Onboarding ========= -->
+            <div id="splash-screen" class="screen flex-col justify-between items-center p-8 h-full">
+                <div class="flex-grow flex flex-col items-center justify-center text-center">
+                    <div class="mb-4">
+                        <svg class="w-24 h-24 text-primary" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        <h1 class="text-dark text-3xl font-bold tracking-[0.2em] mt-2">AAROHI</h1>
+                    </div>
+                    <p class="text-dark/80 text-lg">Where Life Rises</p>
+                </div>
+                <div class="w-full">
+                    <button onclick="showScreen('home-patient-screen', 'patient')" class="w-full bg-primary text-white py-4 rounded-xl text-lg font-semibold mb-4 shadow-lg shadow-red-500/20 hover:bg-red-700 transition-all duration-300 transform hover:scale-105">Continue as Patient</button>
+                    <button onclick="showScreen('donor-registration-screen', 'donor')" class="w-full bg-accent text-dark py-4 rounded-xl text-lg font-semibold shadow-lg shadow-teal-500/20 hover:bg-teal-400 transition-all duration-300 transform hover:scale-105">Join as a Donor</button>
+                </div>
+            </div>
+
+            <!-- ========= SCREEN 2: Home Dashboard (Patient) ========= -->
+            <div id="home-patient-screen" class="screen p-6 space-y-6">
+                <header class="w-full flex justify-between items-center">
+                    <h1 class="text-dark text-2xl font-bold">Hi, Shashi 👋</h1>
+                </header>
+                <main class="flex-grow w-full space-y-6">
+                    <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100 cursor-pointer transition-transform transform hover:scale-[1.02]" onclick="showScreen('raise-request-screen')">
+                        <div class="flex items-center"><div class="bg-red-100 p-3 rounded-full mr-4"><i data-lucide="droplets" class="text-primary"></i></div><div><h2 class="text-dark text-lg font-bold">Raise a Blood Request</h2><p class="text-gray-500 text-sm">Tap here to find available donors.</p></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-dark text-xl font-bold">Recent Requests</h2>
+                            <button onclick="showModal('about-modal')" class="text-secondary font-semibold text-sm">About Aarohi</button>
+                        </div>
+                        <div id="patient-requests-container" class="horizontal-scroll">
+                            <!-- JS Injected -->
+                        </div>
+                    </div>
+                </main>
+            </div>
+            
+            <!-- ========= SCREEN 2.1: Home Dashboard (Donor) ========= -->
+            <div id="home-donor-screen" class="screen p-6 space-y-6">
+                 <header class="w-full flex justify-between items-center">
+                    <h1 class="text-dark text-2xl font-bold">Welcome, Arjun 👏</h1>
+                </header>
+                <main class="flex-grow w-full space-y-6">
+                    <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100 flex justify-between items-center">
+                        <h2 class="text-dark font-semibold text-lg">Your Availability</h2>
+                        <label for="availability-toggle" class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" value="" id="availability-toggle" class="sr-only peer" checked onchange="handleAvailabilityChange(this.checked)">
+                          <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                        <h2 class="text-dark text-xl font-bold mb-4">Nearby Requests</h2>
+                        <div id="donor-requests-container" class="space-y-4">
+                           <!-- JS Injected -->
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+                         <button onclick="fetchDonors()" class="w-full bg-accent text-dark py-3 rounded-lg font-semibold hover:bg-teal-400 transition">Load Live Donors</button>
+                         <div id="loader" class="hidden flex items-center justify-center my-4">
+                            <div class="w-6 h-6 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                            <span class="ml-2 text-sm text-gray-600">Fetching donors...</span>
+                         </div>
+                         <div id="donorList" class="mt-4 space-y-3"></div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- ========= SCREEN 3: Voice Assistant ========= -->
+            <div id="voice-assistant-screen" class="screen justify-between items-center p-8 relative">
+                 <div id="aarohi-avatar" class="absolute top-16 right-6 w-16 h-16 bg-accent rounded-full flex items-center justify-center shadow-lg">
+                    <svg class="w-8 h-8 text-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                 </div>
+                <header class="w-full text-center"><button onclick="goToHome()" class="absolute top-6 left-4 text-white p-2 rounded-full hover:bg-white/20"><i data-lucide="arrow-left"></i></button><h1 class="text-white text-2xl font-bold">Aarohi Voice</h1></header>
+                <div class="flex-grow flex flex-col items-center justify-center text-center w-full">
+                    <p id="voice-prompt" class="text-white/80 text-xl mb-4 h-12">Hello, I'm Aarohi. How can I help?</p>
+                    <div id="mic-glow" class="voice-wave-container active cursor-pointer" onclick="simulateVoiceCommand()">
+                        <div class="voice-wave flex justify-center items-center"><span></span><span></span><span></span><span></span><span></span></div>
+                    </div>
+                    
+                    <!-- Chat UI Container -->
+                    <div id="chat-container" class="w-full mt-6 px-4">
+                        <div id="chat-messages" class="flex flex-col space-y-2 overflow-y-auto" style="max-height: 200px;">
+                            <!-- Chat messages will be injected here -->
+                        </div>
+                    </div>
+                </div>
+                <div id="input-mode-container" class="w-full p-4 hidden">
+                    <div id="keyboard-input-area" class="hidden">
+                        <input type="text" id="chat-input" placeholder="Type your message..." class="w-full p-3 border-2 border-gray-500 rounded-lg bg-gray-600 text-white focus:border-accent focus:ring-0 outline-none">
+                        <button onclick="sendChatMessage()" class="w-full mt-2 bg-accent text-dark py-2 rounded-lg font-semibold">Send</button>
+                    </div>
+                    <button id="input-toggle-btn" onclick="toggleInputMode()" class="w-full bg-gray-700 text-white py-3 rounded-xl text-lg font-semibold flex items-center justify-center">
+                        <i data-lucide="keyboard" class="w-5 h-5 mr-2"></i>
+                        <span>Switch to Typing</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========= SCREEN 4: Raise Request Form ========= -->
+            <div id="raise-request-screen" class="screen p-6">
+                <header class="w-full flex items-center mb-6 relative"><button onclick="goToHome()" class="absolute left-0 text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button><h1 class="text-dark text-2xl font-bold text-center w-full">Raise a Request</h1></header>
+                <main class="flex-grow w-full space-y-5">
+                    <div>
+                        <label class="text-dark font-medium flex items-center">Blood Group <button onclick="showModal('compatibility-modal')" class="ml-2 text-secondary"><i data-lucide="info" class="w-4 h-4"></i></button></label>
+                        <select class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none transition"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+                    </div>
+                    <div>
+                        <label class="text-dark font-medium">Units Required</label>
+                        <input id="units-input" type="number" value="1" min="1" class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="text-dark font-medium">Location</label>
+                        <div class="relative">
+                            <input id="location-input" type="text" placeholder="Fetching location..." class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none transition pr-10">
+                            <button onclick="fetchUserLocation()" class="absolute right-2 top-1/2 -translate-y-1/2 mt-0.5 p-1 text-gray-400 hover:text-primary"><i data-lucide="map-pin" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
+                    <div><label class="text-dark font-medium">Urgency</label><div id="urgency-toggle" class="flex mt-2 space-x-2 bg-gray-200 p-1 rounded-lg"><button class="flex-1 py-2 rounded-md bg-primary text-white shadow-md">High</button><button class="flex-1 py-2 rounded-md text-dark">Medium</button><button class="flex-1 py-2 rounded-md text-dark">Low</button></div></div>
+                </main>
+                <footer class="w-full"><button onclick="validateAndRaiseTicket()" class="w-full bg-primary text-white py-4 rounded-xl text-lg font-semibold shadow-lg shadow-red-500/20 hover:bg-red-700 transition-colors">Raise Ticket</button></footer>
+            </div>
+
+            <!-- ========= SCREEN 5: Donor Map View ========= -->
+            <div id="donor-map-screen" class="screen h-full">
+                <header class="w-full flex items-center justify-between p-4 absolute top-0 z-10 bg-app-background/80 backdrop-blur-sm">
+                    <div class="flex items-center">
+                        <button onclick="goToHome()" class="text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button>
+                        <h1 class="text-dark text-xl font-bold ml-2">Nearby Donors</h1>
+                    </div>
+                    <button onclick="centerOnUser()" class="bg-white text-secondary p-2 rounded-full shadow-md"><i data-lucide="locate-fixed"></i></button>
+                </header>
+                <main id="map" class="flex-grow w-full bg-gray-300"></main>
+                <footer class="w-full p-4 absolute bottom-0 z-10">
+                    <button onclick="showToast('Notifications sent to 3 available donors.')" class="w-full bg-secondary text-white py-3 rounded-xl font-semibold shadow-lg">Notify Nearby Donors</button>
+                </footer>
+            </div>
+
+            <!-- ========= SCREEN 6: Request Status (Live Ticket) ========= -->
+            <div id="request-status-screen" class="screen p-6 space-y-4">
+                <header class="w-full flex items-center relative">
+                    <button onclick="goToHome()" class="absolute left-0 text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button>
+                    <h1 class="text-dark text-2xl font-bold text-center w-full">Request Status</h1>
+                    <span id="clock" class="text-sm text-gray-500 absolute right-0"></span>
+                </header>
+                <main class="flex-grow w-full bg-white rounded-2xl p-6 shadow-md border border-gray-100">
+                    <div class="text-center border-b pb-4 mb-6"><p class="text-gray-500">Ticket ID: <span class="text-dark font-mono font-bold">AAROHI-84UDJ3</span></p><p class="text-primary font-bold text-xl mt-1">B+ (2 Units)</p></div>
+                    <div id="timeline-container" class="timeline">
+                        <!-- JS Injected -->
+                    </div>
+                </main>
+                <div id="timeline-map-container" class="w-full h-48 bg-gray-200 rounded-2xl shadow-inner hidden">
+                    <div id="timeline-map" class="rounded-2xl"></div>
+                </div>
+            </div>
+
+            <!-- ========= SCREEN 7: Donor Profile ========= -->
+            <div id="donor-profile-screen" class="screen p-6">
+                <header class="w-full flex items-center mb-6 relative">
+                    <button onclick="goToHome()" class="absolute left-0 text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button>
+                    <h1 class="text-dark text-2xl font-bold text-center w-full">Your Profile</h1>
+                </header>
+                <main class="flex-grow w-full space-y-4">
+                    <div class="text-center p-4 bg-white rounded-xl shadow-md border">
+                        <p class="font-semibold text-secondary">Donor Rank</p>
+                        <p class="text-2xl font-bold text-dark">Platinum Lifesaver 🏅</p>
+                    </div>
+                     <div class="bg-white rounded-2xl p-4 shadow-md border border-gray-100 cursor-pointer hover:bg-gray-50" onclick="showScreen('donation-history-screen')">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i data-lucide="history" class="text-secondary mr-3"></i>
+                                <p class="font-semibold text-dark">Donation History</p>
+                            </div>
+                            <i data-lucide="chevron-right" class="text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 rounded-r-lg">
+                        <div class="flex items-center">
+                            <i data-lucide="calendar-check-2" class="mr-3"></i>
+                            <p class="font-semibold">You're due for a wellness check soon!</p>
+                        </div>
+                    </div>
+                </main>
+                <footer class="w-full">
+                    <button onclick="showModal('future-roadmap-modal')" class="w-full bg-accent text-dark py-3 rounded-lg font-semibold hover:bg-teal-400 transition">What's Next for Aarohi?</button>
+                </footer>
+            </div>
+            
+            <!-- ========= SCREEN 8: Donation History ========= -->
+            <div id="donation-history-screen" class="screen p-6">
+                <header class="w-full flex items-center mb-6 relative"><button onclick="showScreen('donor-profile-screen')" class="absolute left-0 text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button><h1 class="text-dark text-2xl font-bold text-center w-full">Donation History</h1></header>
+                <main id="donation-history-container" class="flex-grow w-full space-y-3">
+                    <!-- JS Injected -->
+                </main>
+            </div>
+            
+            <!-- ========= SCREEN 9: Donor Registration ========= -->
+            <div id="donor-registration-screen" class="screen p-6">
+                <header class="w-full flex items-center mb-6 relative"><button onclick="showScreen('splash-screen')" class="absolute left-0 text-dark p-2 -ml-2 rounded-full hover:bg-gray-200"><i data-lucide="arrow-left"></i></button><h1 class="text-dark text-2xl font-bold text-center w-full">Become a Lifesaver</h1></header>
+                <main class="flex-grow w-full space-y-4">
+                    <div><label class="text-dark font-medium">Full Name</label><input type="text" placeholder="e.g., Arjun Kumar" class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none"></div>
+                    <div><label class="text-dark font-medium">Phone Number</label><input type="tel" placeholder="e.g., 9876543210" class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none"></div>
+                    <div><label class="text-dark font-medium">City</label><input type="text" placeholder="e.g., Hyderabad" class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none"></div>
+                    <div><label class="text-dark font-medium">Blood Group</label><select class="w-full mt-1 p-3 border-2 border-gray-200 rounded-lg bg-white focus:border-primary focus:ring-0 outline-none"><option>A+</option><option>O-</option></select></div>
+                </main>
+                <footer class="w-full"><button onclick="showScreen('registration-success-screen')" class="w-full bg-primary text-white py-4 rounded-xl text-lg font-semibold shadow-lg shadow-red-500/20 hover:bg-red-700 transition-colors">Register & Continue</button></footer>
+            </div>
+
+            <!-- ========= SCREEN 10: Registration Success with QR Code ========= -->
+            <div id="registration-success-screen" class="screen p-8 justify-center items-center text-center">
+                <main>
+                    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full mx-auto flex items-center justify-center mb-4">
+                        <i data-lucide="check-circle" class="w-12 h-12"></i>
+                    </div>
+                    <h1 class="text-dark text-2xl font-bold">Registration Successful!</h1>
+                    <p class="text-gray-600 my-2">Thank you for joining Aarohi. Here is your unique donor ID.</p>
+                    <img src="https://quickchart.io/qr?text=Donor%20ID%3A%20420AAROHI" class="w-32 h-32 mt-4 mx-auto border-4 border-white shadow-lg"/>
+                    <button onclick="showScreen('home-donor-screen')" class="mt-8 w-full bg-primary text-white py-3 rounded-lg font-semibold">Go to Dashboard</button>
+                </main>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav" class="w-full max-w-sm h-20 bg-white/80 backdrop-blur-lg border-t border-gray-200 absolute bottom-0 rounded-b-[34px] flex justify-around items-center text-gray-500" style="display: none;">
+            <button id="nav-home" class="nav-item text-center p-2 transition-colors" onclick="navigate('home')"><i data-lucide="home" class="mx-auto"></i><span class="text-xs font-medium">Home</span></button>
+            <button id="nav-map" class="nav-item text-center p-2 transition-colors" onclick="navigate('map')"><i data-lucide="map" class="mx-auto"></i><span class="text-xs font-medium">Map</span></button>
+            <button id="nav-voice" class="nav-item text-center p-2 transition-colors" onclick="navigate('voice')"><i data-lucide="mic" class="mx-auto"></i><span class="text-xs font-medium">Voice</span></button>
+            <button id="nav-profile" class="nav-item text-center p-2 transition-colors" onclick="navigate('profile')"><i data-lucide="user-round" class="mx-auto"></i><span class="text-xs font-medium">Profile</span></button>
+        </nav>
+    </div>
+
+    <!-- Reusable Toast Notification -->
+    <div id="toast">
+        <i data-lucide="check-circle" class="mr-2"></i>
+        <span id="toast-message"></span>
+    </div>
+    
+    <!-- Reusable Modals -->
+    <dialog id="future-roadmap-modal" class="rounded-xl shadow-xl p-0 w-full max-w-md backdrop:bg-black/50">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Aarohi’s Future Vision</h2>
+        <p class="text-sm text-gray-600">
+          We're building Aarohi not just as an app — but as a life-saving system. Here’s what’s coming soon:
+        </p>
+        <ul class="mt-4 space-y-2 list-disc list-inside text-sm text-gray-700">
+          <li><strong>WhatsApp Alert System:</strong> Real-time donor notifications via Twilio or WhatsApp Cloud API</li>
+          <li><strong>AI Prediction Model:</strong> Machine Learning (XGBoost / LSTM) to forecast donor availability</li>
+          <li><strong>Secure Authentication:</strong> Role-based access for hospitals, NGOs, and donors</li>
+          <li><strong>Live Transfusion Tracking:</strong> Patients will be able to track real-time donor response</li>
+          <li><strong>Donation Analytics Dashboard:</strong> For Blood Warriors to visualize impact across India</li>
+        </ul>
+      </div>
+      <form method="dialog" class="p-4 bg-gray-50 text-right rounded-b-xl">
+        <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Close</button>
+      </form>
+    </dialog>
+
+    <dialog id="compatibility-modal" class="rounded-xl shadow-xl p-0 w-full max-w-md backdrop:bg-black/50">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">Blood Compatibility</h2>
+        <p class="text-sm text-gray-600 mb-4">
+          Understanding blood types is crucial for safe transfusions.
+        </p>
+        <div class="space-y-2 text-sm">
+            <p>🩸 <strong class="text-dark">O- (Negative)</strong> is the universal donor, compatible with all blood types.</p>
+            <p>🩸 <strong class="text-dark">AB+ (Positive)</strong> is the universal recipient, able to receive from all blood types.</p>
+        </div>
+      </div>
+      <form method="dialog" class="p-4 bg-gray-50 text-right rounded-b-xl">
+        <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Got it</button>
+      </form>
+    </dialog>
+    
+    <dialog id="about-modal" class="rounded-xl shadow-xl p-0 w-full max-w-md backdrop:bg-black/50">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold mb-2 text-primary">About Aarohi</h2>
+        <p class="text-sm text-gray-600 leading-relaxed">
+            Aarohi is an AI-powered blood donor matching platform designed for Thalassemia patients and emergency needs. It helps patients raise requests, find matching donors in real-time, and even uses location tracking and voice input.
+            <br><br>
+            Built with a focus on accessibility, empathy, and scale — Aarohi also plans to integrate WhatsApp alerts, AI donor prediction, and hospital collaboration in the future.
+            <br><br>
+            Whether you're a patient, a donor, or part of the support network — Aarohi connects lives with compassion and intelligence.
+        </p>
+      </div>
+      <form method="dialog" class="p-4 bg-gray-50 text-right rounded-b-xl">
+        <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Close</button>
+      </form>
+    </dialog>
+
+
+    <!-- Leaflet Maps JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        lucide.createIcons();
+
+        // --- App State ---
+        const appState = {
+            currentUserType: 'patient',
+            map: null,
+            mapInitialized: false,
+            timelineMap: null,
+            timelineMapInitialized: false,
+            userLocation: null,
+            timelineInterval: null,
+            donorMarker: null,
+            voiceInputMode: 'voice', // 'voice' or 'keyboard'
+        };
+
+        // --- FAKE DATA MODULES ---
+        const bloodRequests = [
+          { name: "Rahul", bloodGroup: "B+", units: 2, status: "Pending", statusColor: 'yellow', date: "Today, 3:45 PM", location: "Hyderabad" },
+          { name: "Sana", bloodGroup: "A-", units: 1, status: "Fulfilled", statusColor: 'green', date: "Aug 03, 2025", location: "Chennai" },
+          { name: "Priya", bloodGroup: "O+", units: 3, status: "Cancelled", statusColor: 'gray', date: "Aug 01, 2025", location: "Hyderabad" }
+        ];
+        const donorList = [
+          { name: "Arjun", bloodGroup: "O+", status: "available", lat: 17.442, lon: 78.349 },
+          { name: "Meera", bloodGroup: "B+", status: "busy", lat: 17.411, lon: 78.475 },
+          { name: "Kiran", bloodGroup: "A-", status: "available", lat: 17.395, lon: 78.521 },
+          { name: "Sunita", bloodGroup: "AB+", status: "unavailable", lat: 17.363, lon: 78.460 },
+          { name: "Vikram", bloodGroup: "O+", status: "available", lat: 17.48, lon: 78.4 },
+        ];
+        const donationHistory = [
+          { "date": "July 15, 2025", "units": 1, "location": "Hyderabad" },
+          { "date": "May 22, 2025", "units": 2, "location": "Warangal" }
+        ];
+
+        // --- Component Templates ---
+        const createPatientRequestCard = (req) => `
+            <div class="bg-white rounded-2xl p-4 shadow-md border border-gray-100 w-64 cursor-pointer" onclick="showScreen('request-status-screen')">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-bold text-lg text-primary">${req.bloodGroup}</p>
+                        <p class="text-sm text-gray-500">${req.units} Unit(s) for ${req.name}</p>
+                    </div>
+                    <span class="text-xs font-bold text-${req.statusColor}-700 bg-${req.statusColor}-100 px-3 py-1 rounded-full">${req.status}</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-3">${req.date}</p>
+            </div>
+        `;
+        
+        const createDonorRequestCard = (req) => `
+            <div class="flex justify-between items-center cursor-pointer p-2 rounded-lg hover:bg-gray-100" onclick="showScreen('donor-map-screen')">
+                <div>
+                    <span class="font-bold text-lg text-primary">${req.bloodGroup}</span>
+                    <span class="text-gray-500 ml-2">| ${req.location}</span>
+                </div>
+                <span class="text-xs font-bold text-red-700">🔴 Urgent</span>
+            </div>
+        `;
+        
+        const createDonationHistoryCard = (item) => `
+            <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-semibold text-dark">Donated ${item.units} unit(s) in ${item.location}</p>
+                        <p class="text-sm text-gray-500">${item.date}</p>
+                    </div>
+                    <i data-lucide="award" class="text-secondary"></i>
+                </div>
+            </div>
+        `;
+
+        const createSkeletonCard = () => `
+            <div class="bg-white rounded-2xl p-4 shadow-md border border-gray-100 w-64">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="skeleton h-7 w-12 mb-2"></div>
+                        <div class="skeleton h-5 w-32"></div>
+                    </div>
+                    <div class="skeleton h-6 w-20 rounded-full"></div>
+                </div>
+                <div class="skeleton h-4 w-24 mt-3"></div>
+            </div>
+        `;
+
+        const createTimelineItem = (item) => `
+            <div id="timeline-${item.id}" class="timeline-item" style="transition-delay: ${item.delay}s">
+                <div class="timeline-dot ${item.dotClass}">
+                    <div class="icon-container">${item.icon}</div>
+                </div>
+                <h4 class="font-semibold text-dark">${item.title}</h4>
+                <p class="text-sm text-gray-500">${item.description}</p>
+            </div>
+        `;
+
+        // --- UI Rendering ---
+        const renderSkeletons = (containerId, count = 2) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            let skeletons = '';
+            for(let i = 0; i < count; i++) {
+                skeletons += createSkeletonCard();
+            }
+            container.innerHTML = skeletons;
+        }
+
+        const renderPatientDashboard = () => {
+            const containerId = 'patient-requests-container';
+            renderSkeletons(containerId, 3);
+            setTimeout(() => {
+                const container = document.getElementById(containerId);
+                if (container) container.innerHTML = bloodRequests.map(createPatientRequestCard).join('');
+            }, 800);
+        };
+
+        const renderDonorDashboard = () => {
+             const containerId = 'donor-requests-container';
+             const container = document.getElementById(containerId);
+             if (container) container.innerHTML = bloodRequests.filter(r => r.status === 'Pending').map(createDonorRequestCard).join('');
+        };
+        
+        const renderDonationHistory = () => {
+            const container = document.getElementById('donation-history-container');
+            if (!container) return;
+            container.innerHTML = donationHistory.map(createDonationHistoryCard).join('');
+            lucide.createIcons();
+        };
+
+        const renderTimeline = () => {
+            const container = document.getElementById('timeline-container');
+            if (!container) return;
+            const items = [
+                { id: 1, delay: 0, dotClass: 'bg-green-500 text-white', icon: '<i data-lucide="check" class="w-3 h-3"></i>', title: 'Request Raised', description: 'Today at 10:32 AM' },
+                { id: 2, delay: 0.2, dotClass: 'bg-blue-500 text-white', icon: '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>', title: 'Searching for Donors', description: 'Notifying nearby lifesavers...' },
+                { id: 3, delay: 0.4, dotClass: 'bg-gray-300', icon: '', title: 'Donor Matched', description: 'A donor will be assigned shortly.' },
+                { id: 4, delay: 0.6, dotClass: 'bg-gray-300', icon: '', title: 'Donor En Route', description: 'ETA will be updated soon.' },
+            ];
+            container.innerHTML = items.map(createTimelineItem).join('');
+            lucide.createIcons();
+            setTimeout(() => container.querySelectorAll('.timeline-item').forEach(item => item.classList.add('visible')), 100);
+            simulateTimelineProgress();
+        };
+
+        // --- Navigation & Screen Logic ---
+        function showScreen(screenId, userType = null) {
+            if (userType) appState.currentUserType = userType;
+            
+            if(appState.timelineInterval) clearInterval(appState.timelineInterval);
+            if(appState.donorMarker) {
+                if (appState.timelineMap && appState.timelineMap.hasLayer(appState.donorMarker)) {
+                    appState.timelineMap.removeLayer(appState.donorMarker);
+                }
+                appState.donorMarker = null;
+            }
+
+            const nav = document.getElementById('bottom-nav');
+            document.getElementById('main-content').scrollTop = 0;
+
+            const isNavVisible = ['home-patient-screen', 'home-donor-screen', 'donor-map-screen', 'donor-profile-screen', 'request-status-screen', 'donation-history-screen'].includes(screenId);
+            nav.style.display = isNavVisible ? 'flex' : 'none';
+            
+            if (isNavVisible) updateNav(screenId);
+
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            const activeScreen = document.getElementById(screenId);
+            if (activeScreen) activeScreen.classList.add('active');
+            
+            // Screen-specific initializations
+            if (screenId === 'donor-map-screen' && !appState.mapInitialized) initializeMap();
+            if (screenId === 'donor-map-screen' && appState.mapInitialized) setTimeout(() => appState.map.invalidateSize(), 100);
+            
+            if (screenId === 'request-status-screen') {
+                renderTimeline();
+                document.getElementById('timeline-map-container').classList.add('hidden');
+            } else {
+                 document.getElementById('timeline-map-container').classList.add('hidden');
+            }
+            
+            if (screenId === 'raise-request-screen') fetchUserLocation();
+            if (screenId === 'home-patient-screen') renderPatientDashboard();
+            if (screenId === 'home-donor-screen') renderDonorDashboard();
+            if (screenId === 'donation-history-screen') renderDonationHistory();
+            if (screenId === 'voice-assistant-screen') {
+                 document.getElementById('voice-prompt').innerHTML = 'Hello, I\'m Aarohi. How can I help?';
+                 document.getElementById('chat-container').classList.remove('visible');
+                 document.getElementById('input-mode-container').classList.add('hidden');
+            }
+        }
+        
+        function goToHome() {
+            const homeId = appState.currentUserType === 'patient' ? 'home-patient-screen' : 'home-donor-screen';
+            showScreen(homeId);
+        }
+
+        function navigate(section) {
+            const screenMap = {
+                'patient': { home: 'home-patient-screen', map: 'donor-map-screen', voice: 'voice-assistant-screen', profile: 'request-status-screen' },
+                'donor': { home: 'home-donor-screen', map: 'donor-map-screen', voice: 'voice-assistant-screen', profile: 'donor-profile-screen' }
+            };
+            showScreen(screenMap[appState.currentUserType][section]);
+        }
+
+        function updateNav(activeScreenId) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('text-primary'));
+            let activeNavId = null;
+            if (activeScreenId.startsWith('home-')) activeNavId = 'nav-home';
+            if (activeScreenId === 'donor-map-screen') activeNavId = 'nav-map';
+            if (activeScreenId === 'voice-assistant-screen') activeNavId = 'nav-voice';
+            if (['donor-profile-screen', 'request-status-screen', 'donation-history-screen'].includes(activeScreenId)) activeNavId = 'nav-profile';
+            
+            if(activeNavId) document.getElementById(activeNavId)?.classList.add('text-primary');
+        }
+
+        // --- Map Logic ---
+        const createDonorIcon = (bloodGroup, status) => {
+            const statusColors = { available: '#22c55e', busy: '#f59e0b', unavailable: '#ef4444' };
+            return L.divIcon({
+                className: 'custom-donor-icon',
+                html: `<div class="map-icon"><div class="map-icon-bg" style="background-color: ${statusColors[status]};"></div><span class="map-icon-text">${bloodGroup}</span></div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
+            });
+        };
+
+        function initializeMap() {
+            if (appState.mapInitialized) return;
+            appState.map = L.map('map').setView([17.42, 78.45], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }).addTo(appState.map);
+            
+            donorList.forEach(donor => {
+                L.marker([donor.lat, donor.lon], { icon: createDonorIcon(donor.bloodGroup, donor.status) })
+                 .addTo(appState.map);
+            });
+
+            appState.mapInitialized = true;
+            setTimeout(() => appState.map.invalidateSize(), 100);
+        }
+
+        function initializeTimelineMap() {
+            if (appState.timelineMapInitialized) {
+                setTimeout(() => {
+                    if (appState.timelineMap) appState.timelineMap.invalidateSize();
+                }, 100);
+                return;
+            };
+            const mapContainer = document.getElementById('timeline-map-container');
+            mapContainer.classList.remove('hidden');
+
+            appState.timelineMap = L.map('timeline-map').setView([17.388, 78.487], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(appState.timelineMap);
+            
+            // Add static hospital and donor pins
+            L.marker([17.392, 78.4875], { icon: createDonorIcon('H', 'busy') }).addTo(appState.timelineMap).bindPopup("Hospital");
+            L.marker([17.389, 78.489], { icon: createDonorIcon('A+', 'unavailable') }).addTo(appState.timelineMap);
+
+            appState.timelineMapInitialized = true;
+            setTimeout(() => {
+                if (appState.timelineMap) appState.timelineMap.invalidateSize();
+            }, 100);
+        }
+        
+        function centerOnUser() {
+            if (appState.userLocation) {
+                appState.map.setView(appState.userLocation, 14, { animate: true });
+                L.circle(appState.userLocation, { radius: 20, color: '#4285F4', fillOpacity: 0.8 }).addTo(appState.map);
+            } else {
+                appState.map.locate({ setView: true, maxZoom: 14 });
+            }
+        }
+
+        function simulateDonorMovement(map, startLat, startLng, endLat, endLng) {
+            if (!map) return;
+            let lat = startLat;
+            let lng = startLng;
+
+            appState.donorMarker = L.marker([lat, lng], { icon: createDonorIcon('B+', 'available') }).addTo(map);
+            appState.donorMarker.bindPopup("Donor en route...").openPopup();
+
+            const interval = setInterval(() => {
+                if (!appState.donorMarker) {
+                    clearInterval(interval);
+                    return;
+                }
+                lat += (endLat - lat) * 0.1;
+                lng += (endLng - lng) * 0.1;
+
+                appState.donorMarker.setLatLng([lat, lng]);
+
+                if (Math.abs(lat - endLat) < 0.0001 && Math.abs(lng - endLng) < 0.0001) {
+                    clearInterval(interval);
+                    appState.donorMarker.bindPopup("Donor arrived 🩸").openPopup();
+                }
+            }, 500);
+        }
+
+        // --- Interactive & Simulation Logic ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if(modal && typeof modal.showModal === 'function') modal.showModal();
+        }
+        
+        function handleAvailabilityChange(isAvailable) {
+             showToast(isAvailable ? "You are now marked as available." : "You are now marked as unavailable.");
+        }
+        
+        function simulateVoiceCommand() {
+            const chatContainer = document.getElementById('chat-container');
+            const inputModeContainer = document.getElementById('input-mode-container');
+            const chatMessages = document.getElementById('chat-messages');
+            
+            if (!chatContainer || !inputModeContainer || !chatMessages) return;
+
+            chatMessages.innerHTML = ''; // Clear previous chat
+            chatContainer.classList.add('visible');
+            inputModeContainer.classList.remove('hidden');
+
+            addChatMessage("I need O+ blood urgently.", "user");
+            
+            setTimeout(() => {
+                addChatMessage("I found 3 nearby O+ donors. Would you like to notify them?", "aarohi");
+            }, 1500);
+        }
+        
+        function addChatMessage(text, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            if (!chatMessages) return;
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}`;
+            bubble.textContent = text;
+            chatMessages.appendChild(bubble);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function toggleInputMode() {
+            const keyboardArea = document.getElementById('keyboard-input-area');
+            const toggleBtn = document.getElementById('input-toggle-btn');
+            const icon = toggleBtn.querySelector('i');
+            const span = toggleBtn.querySelector('span');
+
+            if (appState.voiceInputMode === 'voice') {
+                appState.voiceInputMode = 'keyboard';
+                keyboardArea.classList.remove('hidden');
+                icon.outerHTML = '<i data-lucide="mic" class="w-5 h-5 mr-2"></i>';
+                span.textContent = 'Switch to Voice';
+            } else {
+                appState.voiceInputMode = 'voice';
+                keyboardArea.classList.add('hidden');
+                icon.outerHTML = '<i data-lucide="keyboard" class="w-5 h-5 mr-2"></i>';
+                span.textContent = 'Switch to Typing';
+            }
+            lucide.createIcons();
+        }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            if (!input || input.value.trim() === '') return;
+            addChatMessage(input.value, 'user');
+            input.value = '';
+            setTimeout(() => addChatMessage("I'm sorry, I'm just a demo. But thank you for interacting!", "aarohi"), 1000);
+        }
+
+
+        function simulateTimelineProgress() {
+            let step = 1;
+            appState.timelineInterval = setInterval(() => {
+                step++;
+                if (step > 4) { clearInterval(appState.timelineInterval); return; }
+                const item = document.getElementById(`timeline-${step}`);
+                const prevItem = document.getElementById(`timeline-${step-1}`);
+                if (!item || !prevItem) return;
+
+                const prevDot = prevItem.querySelector('.timeline-dot');
+                prevDot.classList.remove('bg-blue-500'); prevDot.classList.add('bg-green-500');
+                prevItem.querySelector('.icon-container').innerHTML = '<i data-lucide="check" class="w-3 h-3"></i>';
+                
+                const currentDot = item.querySelector('.timeline-dot');
+                currentDot.classList.remove('bg-gray-300'); currentDot.classList.add('bg-blue-500', 'text-white');
+                item.querySelector('.icon-container').innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>';
+
+                if(step === 3) {
+                    item.querySelector('h4').textContent = 'Donor Matched';
+                    item.querySelector('p').textContent = 'Arjun (O+) has accepted the request.';
+                }
+                if(step === 4) {
+                    item.querySelector('h4').textContent = 'Donor En Route';
+                    item.querySelector('p').textContent = 'Arjun is on the way. ETA: 15 mins.';
+                    initializeTimelineMap();
+                    simulateDonorMovement(appState.timelineMap, 17.385, 78.4867, 17.392, 78.4875);
+                }
+
+                lucide.createIcons();
+            }, 3000);
+        }
+
+        async function fetchDonors() {
+          const loader = document.getElementById("loader");
+          const donorListEl = document.getElementById("donorList");
+          donorListEl.innerHTML = "";
+          loader.classList.remove("hidden");
+
+          try {
+            const res = await fetch('https://jsonplaceholder.typicode.com/users');
+            const data = await res.json();
+
+            setTimeout(() => {
+              loader.classList.add("hidden");
+              
+              const bloodGroups = ['O+', 'A+', 'B+', 'AB+', 'O-'];
+              data.slice(0, 5).forEach((user, index) => {
+                const donorCard = `
+                  <div class="bg-gray-50 p-3 shadow-sm rounded-lg">
+                    <h3 class="text-md font-semibold text-secondary">${user.name}</h3>
+                    <div class="flex justify-between text-xs text-gray-600 mt-1">
+                        <span>Blood Group: ${bloodGroups[index % bloodGroups.length]}</span>
+                        <span>${user.address.city}</span>
+                        <span class="font-medium text-green-600">Available</span>
+                    </div>
+                  </div>`;
+                donorListEl.innerHTML += donorCard;
+              });
+            }, 1500);
+          } catch (err) {
+            loader.innerHTML = "Failed to fetch donors.";
+            console.error("Error fetching donor data:", err);
+          }
+        }
+
+        // --- Form Logic ---
+        function fetchUserLocation() {
+            const locationInput = document.getElementById('location-input');
+            locationInput.value = `Gachibowli, Hyderabad`;
+        }
+
+        function validateAndRaiseTicket() {
+            showScreen('request-status-screen');
+        }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("You’re not just saving blood. You’re saving someone’s story.");
+            showScreen('splash-screen');
+            
+            setInterval(() => {
+                const clockEl = document.getElementById("clock");
+                if(clockEl) clockEl.innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }, 1000);
+
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
