@@ -15,9 +15,3 @@ Clone this repository and open index.html in your browser to explore the current
 
 Contributing
 We welcome feedback and contributions. If you would like to help enhance Aarohi—whether by refining the UI, building the backend services, or expanding its reach—please open an issue or submit a pull request. Together, we can bring this vision to life and ensure that no patient waits for a drop of hope.
-
-
-
-
-
-Ask ChatGPT
