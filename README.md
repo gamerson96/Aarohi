@@ -2,6 +2,10 @@
 Aarohi – Where Life Rises
 Aarohi is a voice-powered, AI-inspired blood donor matching platform designed to support Thalassemia patients and other chronic transfusion needs. Built as a highly polished, mobile-first web application using HTML, Tailwind CSS, and vanilla JavaScript, Aarohi allows patients to raise urgent blood requests, track their status in real time, and connect with nearby donors—all from the palm of their hand.
 
+## 🔗 Live Demo  
+👉 [Click here to try Aarohi live](https://aarohi-chi.vercel.app/)
+
+
 Every aspect of Aarohi’s user interface has been crafted for clarity and compassion. A patient dashboard makes it easy to submit a new request by specifying blood type, units needed, location, and urgency, while a donor dashboard lets volunteers toggle their availability, view nearby requests, and track the number of lives they’ve saved. Once a request is raised, an animated timeline and embedded map display each stage—Request Raised, Donor Matched, and Donor En Route—complete with a smoothly moving marker that simulates a donor’s approach to the hospital.
 
 At the heart of Aarohi is an interactive voice assistant. Patients may tap the microphone to speak their needs or switch to keyboard input; a chatbox then appears with conversational messages from “Aarohi” offering guidance and next steps. A small, floating avatar keeps the experience friendly and reassuring, while a loader animation and a mock API integration (using JSONPlaceholder) simulate real-world data fetching so that every interaction feels robust and production-ready.
